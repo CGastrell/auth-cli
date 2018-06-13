@@ -6,6 +6,7 @@
   "author": "Christian Gastrell <cgastrell@gmail.com>",
   "license": "MIT",
   "dependencies": {
-    "inquirer": "^6.0.0"
+    "inquirer": "^6.0.0",
+    "standard": "^11.0.1"
   }
 }

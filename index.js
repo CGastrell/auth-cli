@@ -1,134 +1,147 @@
-/**
- * Heirarchical conversation example
- */
+var inquirer = require('inquirer')
 
-'use strict';
-var inquirer = require('inquirer');
-
-var apis = []
-var clients = []
-var apiPrompts = [
-  {
-    name: 'name',
-    message: 'API name (for reference only, this should be a valid string)'
+var prompts = {
+  api: [
+    {
+      name: 'name',
+      message: 'API name (for reference only, this should be a valid string)'
+    },
+    {
+      name: 'domain',
+      message: 'The domain of the API (skip with Enter)'
+    }
+  ],
+  otherApi: {
+    name: 'otherApi',
+    message: 'Add another API?',
+    type: 'confirm'
   },
-  {
-    name: 'domain',
-    message: 'The domain of the API (skip with Enter)'
+  client: {
+    name: {
+      name: 'name',
+      message: 'Give the client a name. Use simple characters, including spaces'
+    },
+    type: {
+      name: 'type',
+      message: 'Where are you going to use this client?',
+      type: 'list',
+      choices: ['spa', 'webapp', 'api']
+    },
+    callbackURL: {
+      name: 'callbackURL',
+      message: 'Add a callback URL for your SPA'
+    },
+    allowTwoFactor: {
+      name: 'twoFactor',
+      type: 'confirm',
+      message: 'Enable 2fa authentication on your client?'
+    }
   }
-]
-
-var anotherApiPrompt = {
-  name: 'otherApi',
-  message: 'Add another API?',
-  type: 'confirm'
 }
-function main() {
-  console.log('Create the APIs which the AuthService will interact with.');
-  promptApis(apis);
+var APIS = []
+const CLIENT = {
+  DEFAULTS: {
+    name: '',
+    type: '',
+    key: '',
+    secret: '',
+    domain: '',
+    callbackURL: '',
+    refreshToken: false,
+    skipAuthorization: false,
+    allowTwoFactor: false,
+    jwtExpTime: 1800,
+    grants: [],
+    apps: [],
+    disclaimer: [{
+      title: 'Request auth access',
+      details: 'This app is requesting access to your account\'s basic profile data.'
+    }],
+    roles: []
+  },
+  SPA: {
+    grants: ['implicit']
+  },
+  WEB: {
+    skipAuthorization: true,
+    refreshToken: true,
+    grants: ['implicit', 'refresh-token', 'client-credentials']
+  },
+  API: {
+    skipAuthorization: true,
+    refreshToken: true,
+    grants: ['refresh-token', 'client-credentials']
+  }
 }
 
-function moreApis(apiCollection) {
-  inquirer.prompt(anotherApiPrompt).then(confirm => {
-    console.log(confirm)
+function main () {
+  console.log('Create the APIs which the AuthService will interact with.')
+  promptApis(APIS)
+}
+
+function promptApis (apiCollection) {
+  inquirer.prompt(prompts.api).then(answers => {
+    moreApis(Array.prototype.concat([], apiCollection, answers))
+  })
+}
+
+function moreApis (apiCollection) {
+  inquirer.prompt(prompts.otherApi).then(confirm => {
     if (confirm.otherApi) {
       promptApis(apiCollection)
     } else {
-      apis = apiCollection
-      promptClients(clients)
+      APIS = apiCollection
+      console.log('\nCreate auth clients for your AuthService. The client is the authorization consumer for your APIs')
+      promptClients()
     }
   })
 }
-function promptApis(apiCollection) {
-  inquirer.prompt(apiPrompts).then(answers => {
-    moreApis(Array.prototype.concat([], apiCollection, answers))
-    // if (answers.direction === 'Forward') {
-    //   console.log('You find yourself in a forest');
-    //   console.log(
-    //     'There is a wolf in front of you; a friendly looking dwarf to the right and an impasse to the left.'
-    //   );
-    //   encounter1();
-    // } else {
-    //   console.log('You cannot go that way. Try again');
-    //   exitHouse();
-    // }
-  });
+function promptClients () {
+  inquirer.prompt(prompts.client.name).then(answer => {
+    CLIENT.DEFAULTS.name = answer.name
+    promptClientType()
+  })
 }
-
-var clientPrompts = [
-  {
-    name: 'Type',
-    type: 'list',
-    choices: ['spa', 'webapp', 'api']
-  }
-]
-function promptClients (clientCollection) {
-
-}
-
-
-function encounter1() {
-  inquirer.prompt(directionsPrompt).then(answers => {
-    var direction = answers.direction;
-    if (direction === 'Forward') {
-      console.log('You attempt to fight the wolf');
-      console.log(
-        'Theres a stick and some stones lying around you could use as a weapon'
-      );
-      encounter2b();
-    } else if (direction === 'Right') {
-      console.log('You befriend the dwarf');
-      console.log('He helps you kill the wolf. You can now move forward');
-      encounter2a();
-    } else {
-      console.log('You cannot go that way');
-      encounter1();
+function promptClientType () {
+  inquirer.prompt(prompts.client.type).then(answer => {
+    CLIENT.DEFAULTS.type = answer.type
+    switch (answer.type) {
+      case 'spa':
+        CLIENT.RESULT = Object.assign({}, CLIENT.DEFAULTS, CLIENT.SPA)
+        break
+      case 'webapp':
+        CLIENT.RESULT = Object.assign({}, CLIENT.DEFAULTS, CLIENT.WEB)
+        break
+      case 'api':
+        CLIENT.RESULT = Object.assign({}, CLIENT.DEFAULTS, CLIENT.API)
+        break
+      default: throw new Error()
     }
-  });
-}
 
-function encounter2a() {
-  inquirer.prompt(directionsPrompt).then(answers => {
-    var direction = answers.direction;
-    if (direction === 'Forward') {
-      var output = 'You find a painted wooden sign that says:';
-      output += ' \n';
-      output += ' ____  _____  ____  _____ \n';
-      output += '(_  _)(  _  )(  _ \\(  _  ) \n';
-      output += '  )(   )(_)(  )(_) ))(_)(  \n';
-      output += ' (__) (_____)(____/(_____) \n';
-      console.log(output);
+    if (answer.type === 'spa' || answer.type === 'webapp') {
+      promptClientCallbackUrl()
     } else {
-      console.log('You cannot go that way');
-      encounter2a();
+      showResult()
     }
-  });
+  })
 }
-
-function encounter2b() {
-  inquirer
-    .prompt({
-      type: 'list',
-      name: 'weapon',
-      message: 'Pick one',
-      choices: [
-        'Use the stick',
-        'Grab a large rock',
-        'Try and make a run for it',
-        'Attack the wolf unarmed'
-      ]
-    })
-    .then(() => {
-      console.log('The wolf mauls you. You die. The end.');
-    });
+function promptClientCallbackUrl () {
+  inquirer.prompt(prompts.client.callbackURL).then(answer => {
+    CLIENT.RESULT.callbackURL = answer.callbackURL
+    promptClientTwoFactor()
+  })
 }
-
-main();
-
-
-var directionsPrompt = {
-  type: 'list',
-  name: 'direction',
-  message: 'Which direction would you like to go?',
-  choices: ['Forward', 'Right', 'Left', 'Back']
-};
+function promptClientTwoFactor () {
+  inquirer.prompt(prompts.client.allowTwoFactor).then(confirm => {
+    CLIENT.RESULT.allowTwoFactor = confirm.twoFactor
+    if (confirm.twoFactor) {
+      CLIENT.RESULT.grants.push('two-factor')
+    }
+    showResult()
+  })
+}
+function showResult () {
+  console.log(APIS)
+  console.log(CLIENT.RESULT)
+}
+main()
