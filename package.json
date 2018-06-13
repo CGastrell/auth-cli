@@ -1,0 +1,11 @@
+{
+  "name": "auth-cli",
+  "version": "1.0.0",
+  "main": "index.js",
+  "repository": "https://github.com/cgastrell/auth-cli",
+  "author": "Christian Gastrell <cgastrell@gmail.com>",
+  "license": "MIT",
+  "dependencies": {
+    "inquirer": "^6.0.0"
+  }
+}
